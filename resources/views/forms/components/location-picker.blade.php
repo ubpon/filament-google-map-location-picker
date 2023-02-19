@@ -1,7 +1,12 @@
-<?php $map_id = "map" .  \Illuminate\Support\Str::slug($getStatePath(), "_");  ?>
+<?php 
+
+    $map_id = "map" .  \Illuminate\Support\Str::slug($getStatePath(), "_");
+    $libraries = config('filament-google-map-location-picker.libraries');
+
+?>
 
 <script
-        src="https://maps.googleapis.com/maps/api/js?key={{config('filament-google-map-location-picker.google_map_key')}}&libraries=places&v=weekly&language={{app()->getLocale()}}">
+        src="https://maps.googleapis.com/maps/api/js?key={{config('filament-google-map-location-picker.google_map_key')}}&libraries={{config('filament-google-map-location-picker.libraries')}}&v=weekly&language={{app()->getLocale()}}">
 </script>
 <script>
     function {{$map_id}}googleMapPicker(config) {
@@ -41,7 +46,6 @@
                     marker.setPosition(valueLocation);
                 }
 
-
                 map.addListener('click', (event) => {
                     this.markerLocation = event.latLng.toJSON();
                 });
@@ -54,6 +58,33 @@
                         input.value = ''
                         this.markerLocation = searchBox.getPlaces()[0].geometry.location
                     })
+                }
+
+                if (config.hasDrawing) {
+                    const drawingManager = new google.maps.drawing.DrawingManager({
+                        drawingMode: google.maps.drawing.OverlayType.MARKER,
+                        drawingControl: true,
+                        drawingControlOptions: {
+                        position: google.maps.ControlPosition.TOP_CENTER,
+                        drawingModes: [
+                            google.maps.drawing.OverlayType.POLYGON,
+                            google.maps.drawing.OverlayType.RECTANGLE,
+                        ],
+                        },
+                        markerOptions: {
+                        icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png",
+                        },
+                        circleOptions: {
+                        fillColor: "#ffff00",
+                        fillOpacity: 1,
+                        strokeWeight: 5,
+                        clickable: false,
+                        editable: true,
+                        zIndex: 1,
+                        },
+                    });
+
+                    drawingManager.setMap(map);
                 }
 
                 this.$watch('markerLocation', () => {
@@ -81,7 +112,8 @@
     <div wire:ignore x-data="{{$map_id}}googleMapPicker({
             value: $wire.entangle('{{ $getStatePath() }}'),
             zoom: {{$getDefaultZoom()}},
-            controls: {{$getMapControls()}}
+            controls: {{$getMapControls()}},
+            hasDrawing: {{str_contains('drawing', $libraries) ? true : false}}
         })" x-init="{{$map_id}}init()">
         @if($isSearchBoxControlEnabled())
             <input x-ref="{{$map_id}}pacinput" type="text" placeholder="Search Box"/>
